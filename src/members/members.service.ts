@@ -125,14 +125,30 @@ export class MembersService extends PrismaClient implements OnModuleInit {
       const members = await this.member.findMany({
         where: {
           projectsId: projectId
-        }
+        },
+        distinct: ['userId']
       });
-
-
 
       if (members.length === 0) {
         return []
       }
+      // // Construye un array de promesas para obtener cada projectExists
+      // const membersPromises = members.map(async (element) => {
+      //   return firstValueFrom(
+      //     this.client.send({ cmd: 'find_one_user'  }, element.userId)
+      //   );
+      // });
+  
+      // // Espera a que todas las promesas se resuelvan
+      // const newMembers = await Promise.all(membersPromises);
+
+
+
+      // // Elimina duplicados basándote en una propiedad única (ej. 'id')
+      // const uniqueMembers = newMembers.filter(
+      //   (member, index, self) =>
+      //     self.findIndex((m) => m.id === member.id) === index
+      // );
 
       return members;
 
