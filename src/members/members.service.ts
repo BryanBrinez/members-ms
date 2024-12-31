@@ -26,7 +26,7 @@ export class MembersService extends PrismaClient implements OnModuleInit {
 
 
   async create(createMemberDto: CreateMemberDto) {
-  
+
     try {
       const userExists = await firstValueFrom(
         this.client.send({ cmd: 'find_one_user' }, { id: createMemberDto.userId })
@@ -35,14 +35,14 @@ export class MembersService extends PrismaClient implements OnModuleInit {
       if (!userExists) {
         throw new RpcException('User not found');
       }
-  
+
       const projectExists = await firstValueFrom(
         this.client.send({ cmd: 'find_one_project' }, createMemberDto.projectsId)
       );
       if (!projectExists) {
         throw new RpcException('Project not found');
       }
-  
+
       const newMember = await this.member.create({
         data: createMemberDto,
       });
@@ -51,8 +51,8 @@ export class MembersService extends PrismaClient implements OnModuleInit {
       throw new RpcException({ message: error.message, status: HttpStatus.BAD_REQUEST });
     }
   }
-  
-  
+
+
   async findAll(paginationDto: PaginationDto) {
 
     const { page, limit } = paginationDto
@@ -76,6 +76,115 @@ export class MembersService extends PrismaClient implements OnModuleInit {
 
     }
   }
+
+
+
+
+  async findUsersNotInProject(projectId: string) {
+    console.log('Searching for users not in project:', projectId);
+  
+    try {
+      // Paso 1: Obtener todos los miembros del proyecto
+      const members = await this.member.findMany({
+        where: {
+          projectsId: projectId
+        },
+        select: {
+          userId: true // Solo seleccionamos los userId
+        }
+      });
+  
+      // Paso 2: Obtener todos los usuarios del microservicio de Users
+      const allUsers = await firstValueFrom(
+        this.client.send({ cmd: 'find_all_user' }, {})
+      );
+  
+      // Paso 3: Filtrar los usuarios que NO están en el proyecto
+      const usersNotInProject = allUsers.data.filter(user => 
+        !members.some(member => member.userId === user.id)
+      );
+  
+      return usersNotInProject;
+    } catch (error) {
+      console.error('Error while fetching users not in project:', error);
+      throw new RpcException({
+        message: 'Algo ha fallado, comunícate con tu administrador',
+        status: HttpStatus.BAD_REQUEST
+      });
+    }
+  }
+  
+
+
+
+  async findByProjectId(projectId: string) {
+    console.log('Searching for projects with ownerId:', projectId, typeof projectId);
+
+
+    try {
+      const members = await this.member.findMany({
+        where: {
+          projectsId: projectId
+        }
+      });
+
+
+
+      if (members.length === 0) {
+        return []
+      }
+
+      return members;
+
+    } catch (error) {
+      console.error('Error while fetching projects:', error);
+      throw new RpcException({ message: 'Algo ha fallado, comunicate con tu administrador', status: HttpStatus.BAD_REQUEST });
+    }
+  }
+
+
+  async findByUserId(userId: string) {
+    console.log('Searching for projects with ownerId:', userId, typeof userId);
+  
+    try {
+      const members = await this.member.findMany({
+        where: {
+          userId: userId
+        }
+      });
+  
+      if (members.length === 0) {
+        return [];
+      }
+  
+      // Construye un array de promesas para obtener cada projectExists
+      const projectPromises = members.map(async (element) => {
+        return firstValueFrom(
+          this.client.send({ cmd: 'find_one_project' }, element.projectsId)
+        );
+      });
+  
+      // Espera a que todas las promesas se resuelvan
+      const projects = await Promise.all(projectPromises);
+  
+      // Elimina duplicados basándote en una propiedad única (ej. 'id')
+      const uniqueProjects = projects.filter(
+        (project, index, self) =>
+          self.findIndex((p) => p.id === project.id) === index
+      );
+  
+      // Retorna el array de resultados únicos
+      return uniqueProjects;
+    } catch (error) {
+      console.error('Error while fetching projects:', error);
+      throw new RpcException({
+        message: 'Algo ha fallado, comunícate con tu administrador',
+        status: HttpStatus.BAD_REQUEST
+      });
+    }
+  }
+  
+
 
 
   findOne(id: number) {

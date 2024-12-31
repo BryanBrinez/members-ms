@@ -25,6 +25,23 @@ export class MembersController {
     return this.membersService.findOne(id);
   }
 
+  @MessagePattern({ cmd: 'find_by_projec_id' })
+  findByProjectId(@Payload() projectId: string) {
+    return this.membersService.findByProjectId(projectId);
+  }
+
+
+  @MessagePattern({ cmd: 'find_users_not_in_project' })
+  findUsersNotInProject(@Payload() projectId: string) {
+    return this.membersService.findUsersNotInProject(projectId);
+  }
+
+
+  @MessagePattern({ cmd: 'find_by_user_id' })
+  findByUserId(@Payload() userId: string) {
+    return this.membersService.findByUserId(userId);
+  }
+
   // @MessagePattern('updateMember')
   // update(@Payload() updateMemberDto: UpdateMemberDto) {
   //   return this.membersService.update(updateMemberDto.id, updateMemberDto);
